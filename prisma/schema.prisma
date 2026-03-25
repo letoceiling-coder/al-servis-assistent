@@ -55,7 +55,20 @@ model Document {
   id          String    @id @default(uuid())
   title       String
   content     String
+  type        String
   assistantId String
   createdAt   DateTime  @default(now())
-  assistant   Assistant @relation(fields: [assistantId], references: [id])
+  deletedAt   DateTime?
+
+  assistant Assistant       @relation(fields: [assistantId], references: [id])
+  chunks    DocumentChunk[]
+}
+
+model DocumentChunk {
+  id         String   @id @default(uuid())
+  content    String
+  documentId String
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id])
 }
