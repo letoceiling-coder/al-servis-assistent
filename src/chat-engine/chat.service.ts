@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiKeysService } from '../api-keys/api-keys.service';
+import { ChatStorageService } from '../chat-storage/chat-storage.service';
 import { LlmService } from '../llm/llm.service';
 import { buildContextWithinLimit } from './utils/build-context';
 import { buildPrompt } from './utils/build-prompt';
@@ -21,6 +22,7 @@ export class ChatService {
     private readonly prisma: PrismaService,
     private readonly apiKeysService: ApiKeysService,
     private readonly llmService: LlmService,
+    private readonly chatStorage: ChatStorageService,
   ) {}
 
   async chat(authorizationHeader: string | undefined, message: string) {
@@ -43,6 +45,9 @@ export class ChatService {
       throw new UnauthorizedException('Assistant not found');
     }
 
+    const { id: chatId } = await this.chatStorage.createChat(assistantId);
+    await this.chatStorage.saveMessage(chatId, 'user', userMessage);
+
     const rows = await this.prisma.documentChunk.findMany({
       where: {
         document: {
@@ -63,6 +68,7 @@ export class ChatService {
 
     console.log({
       assistantId,
+      chatId,
       messageLength: userMessage.length,
       chunksUsed,
     });
@@ -70,7 +76,9 @@ export class ChatService {
     const prompt = buildPrompt(assistant.systemPrompt, context, userMessage);
     const answer = await this.llmService.generate(prompt, assistant.model);
 
-    return { answer, assistantId };
+    await this.chatStorage.saveMessage(chatId, 'assistant', answer);
+
+    return { chatId, answer };
   }
 
   private parseBearerKey(header: string | undefined): string {
