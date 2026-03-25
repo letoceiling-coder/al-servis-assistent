@@ -1,4 +1,73 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { CreateDocumentDto } from './dto/create-document.dto';
+
+const documentPublic = {
+  id: true,
+  title: true,
+  content: true,
+  assistantId: true,
+  createdAt: true,
+} as const;
 
 @Injectable()
-export class DocumentsService {}
+export class DocumentsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async create(userId: string, dto: CreateDocumentDto) {
+    const assistant = await this.prisma.assistant.findUnique({
+      where: { id: dto.assistantId },
+      select: { id: true, userId: true },
+    });
+    if (!assistant) {
+      throw new NotFoundException('Assistant not found');
+    }
+    if (assistant.userId !== userId) {
+      throw new ForbiddenException('Assistant does not belong to user');
+    }
+
+    return this.prisma.document.create({
+      data: {
+        title: dto.title.trim(),
+        content: dto.content.trim(),
+        assistantId: dto.assistantId,
+      },
+      select: documentPublic,
+    });
+  }
+
+  async findAll(userId: string, assistantId: string) {
+    const assistant = await this.prisma.assistant.findUnique({
+      where: { id: assistantId },
+      select: { id: true, userId: true },
+    });
+    if (!assistant) {
+      throw new NotFoundException('Assistant not found');
+    }
+    if (assistant.userId !== userId) {
+      throw new ForbiddenException('Assistant does not belong to user');
+    }
+
+    return this.prisma.document.findMany({
+      where: { assistantId },
+      orderBy: { createdAt: 'desc' },
+      select: documentPublic,
+    });
+  }
+
+  async delete(userId: string, id: string) {
+    const row = await this.prisma.document.findUnique({
+      where: { id },
+      select: { id: true, assistant: { select: { userId: true } } },
+    });
+
+    if (!row) {
+      throw new NotFoundException('Document not found');
+    }
+    if (row.assistant.userId !== userId) {
+      throw new ForbiddenException('Document does not belong to user');
+    }
+
+    await this.prisma.document.delete({ where: { id } });
+  }
+}

@@ -21,6 +21,7 @@ model Assistant {
   userId    String
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
+  documents Document[]
 }
 
 model ApiKey {
@@ -51,8 +52,10 @@ model Lead {
 }
 
 model Document {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  createdAt DateTime @default(now())
+  id          String    @id @default(uuid())
+  title       String
+  content     String
+  assistantId String
+  createdAt   DateTime  @default(now())
+  assistant   Assistant @relation(fields: [assistantId], references: [id])
 }
