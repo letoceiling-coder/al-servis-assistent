@@ -10,6 +10,7 @@ import { DocumentsModule } from './documents/documents.module';
 import { ChatsModule } from './chats/chats.module';
 import { LeadsModule } from './leads/leads.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
+import { ChatEngineModule } from './chat-engine/chat-engine.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { ApiKeysModule } from './api-keys/api-keys.module';
     ChatsModule,
     LeadsModule,
     ApiKeysModule,
+    ChatEngineModule,
   ],
   controllers: [AppController],
   providers: [AppService],
