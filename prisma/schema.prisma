@@ -19,6 +19,7 @@ model Assistant {
   id           String   @id @default(uuid())
   name         String
   systemPrompt String   @default("")
+  model        String   @default("mistral")
   userId       String
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])

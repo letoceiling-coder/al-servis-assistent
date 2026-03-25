@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiKeysService } from '../api-keys/api-keys.service';
+import { LlmService } from '../llm/llm.service';
 import { buildContextWithinLimit } from './utils/build-context';
 import { buildPrompt } from './utils/build-prompt';
 
@@ -19,6 +20,7 @@ export class ChatService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly apiKeysService: ApiKeysService,
+    private readonly llmService: LlmService,
   ) {}
 
   async chat(authorizationHeader: string | undefined, message: string) {
@@ -35,7 +37,7 @@ export class ChatService {
 
     const assistant = await this.prisma.assistant.findUnique({
       where: { id: assistantId },
-      select: { id: true, systemPrompt: true },
+      select: { id: true, systemPrompt: true, model: true },
     });
     if (!assistant) {
       throw new UnauthorizedException('Assistant not found');
@@ -66,9 +68,7 @@ export class ChatService {
     });
 
     const prompt = buildPrompt(assistant.systemPrompt, context, userMessage);
-    void prompt;
-
-    const answer = 'Mock AI response based on context';
+    const answer = await this.llmService.generate(prompt, assistant.model);
 
     return { answer, assistantId };
   }
