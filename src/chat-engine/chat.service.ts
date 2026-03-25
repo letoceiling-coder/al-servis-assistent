@@ -1,9 +1,18 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { ApiKeysService } from '../api-keys/api-keys.service';
+import { buildContextWithinLimit } from './utils/build-context';
+import { buildPrompt } from './utils/build-prompt';
 
-/** Max chunks to include in context (RAG MVP; between 20–50). */
-const CONTEXT_CHUNK_LIMIT = 40;
+/** Max chunks to fetch before trimming by byte/char budget. */
+const CONTEXT_CHUNK_FETCH_LIMIT = 50;
+
+/** Max characters included in the RAG context window. */
+const MAX_CONTEXT_LENGTH = 8000;
 
 @Injectable()
 export class ChatService {
@@ -19,41 +28,44 @@ export class ChatService {
       throw new UnauthorizedException('Invalid API key');
     }
 
+    const userMessage = message.trim();
+    if (userMessage.length < 2) {
+      throw new BadRequestException('Message must be at least 2 characters');
+    }
+
     const assistant = await this.prisma.assistant.findUnique({
       where: { id: assistantId },
-      select: { id: true },
+      select: { id: true, systemPrompt: true },
     });
     if (!assistant) {
       throw new UnauthorizedException('Assistant not found');
     }
 
-    const chunks = await this.prisma.documentChunk.findMany({
+    const rows = await this.prisma.documentChunk.findMany({
       where: {
         document: {
           assistantId,
           deletedAt: null,
         },
       },
-      take: CONTEXT_CHUNK_LIMIT,
+      take: CONTEXT_CHUNK_FETCH_LIMIT,
       orderBy: { createdAt: 'asc' },
       select: { content: true },
     });
 
-    const context = chunks.map((c) => c.content).join('\n\n');
-    const userMessage = message.trim();
+    const chunkContents = rows.map((r) => r.content);
+    const { context, chunksUsed } = buildContextWithinLimit(
+      chunkContents,
+      MAX_CONTEXT_LENGTH,
+    );
 
-    const prompt = `
-You are AI assistant.
+    console.log({
+      assistantId,
+      messageLength: userMessage.length,
+      chunksUsed,
+    });
 
-Context:
-${context}
-
-User:
-${userMessage}
-
-Answer:
-`;
-
+    const prompt = buildPrompt(assistant.systemPrompt, context, userMessage);
     void prompt;
 
     const answer = 'Mock AI response based on context';
