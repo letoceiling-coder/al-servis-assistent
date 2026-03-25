@@ -6,7 +6,7 @@ import type { LLMProvider } from '../llm-provider.interface';
 export class MistralProvider implements LLMProvider {
   constructor(private readonly config: ConfigService) {}
 
-  async generate(prompt: string): Promise<string> {
+  async generate(prompt: string, _modelName?: string): Promise<string> {
     const apiKey = this.config.get<string>('MISTRAL_API_KEY');
     const url =
       this.config.get<string>('MISTRAL_API_URL') ||

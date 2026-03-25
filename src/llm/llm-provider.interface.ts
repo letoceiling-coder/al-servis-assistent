@@ -1,3 +1,4 @@
 export interface LLMProvider {
-  generate(prompt: string): Promise<string>;
+  /** Optional Ollama model name (e.g. llama3, mistral). */
+  generate(prompt: string, modelName?: string): Promise<string>;
 }

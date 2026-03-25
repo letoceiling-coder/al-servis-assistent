@@ -7,11 +7,14 @@ import type { LLMProvider } from '../llm-provider.interface';
 export class LlamaProvider implements LLMProvider {
   constructor(private readonly config: ConfigService) {}
 
-  async generate(prompt: string): Promise<string> {
+  async generate(prompt: string, modelName?: string): Promise<string> {
     const url =
       this.config.get<string>('LLAMA_API_URL') ||
       'http://127.0.0.1:11434/api/chat';
-    const model = this.config.get<string>('LLAMA_MODEL') || 'llama3';
+    const model =
+      (modelName && modelName.trim()) ||
+      this.config.get<string>('LLAMA_MODEL') ||
+      'llama3';
 
     const res = await fetch(url, {
       method: 'POST',
