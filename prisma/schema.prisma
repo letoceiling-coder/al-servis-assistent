@@ -22,13 +22,17 @@ model Assistant {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
   documents Document[]
+  apiKeys   ApiKey[]
 }
 
 model ApiKey {
-  id        String   @id @default(cuid())
-  keyHash   String
-  label     String?
-  createdAt DateTime @default(now())
+  id          String   @id @default(uuid())
+  name        String
+  keyHash     String
+  assistantId String
+  createdAt   DateTime @default(now())
+
+  assistant Assistant @relation(fields: [assistantId], references: [id])
 }
 
 model Chat {
